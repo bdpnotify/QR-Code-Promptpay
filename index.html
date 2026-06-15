@@ -293,6 +293,93 @@
   }
 
 
+
+  /* saved contacts */
+  .contacts-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .contact-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--grey);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 5px 10px 5px 12px;
+    font-size: 13px;
+    font-family: 'Sarabun', sans-serif;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    max-width: 200px;
+  }
+
+  .contact-chip:hover { border-color: var(--blue); background: rgba(37,99,235,0.06); }
+  .contact-chip.active { border-color: var(--blue); background: rgba(37,99,235,0.1); color: var(--blue); }
+
+  .contact-chip .chip-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+  }
+
+  .contact-chip .chip-num {
+    font-size: 11px;
+    color: var(--mid);
+    white-space: nowrap;
+  }
+
+  .chip-del {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background 0.15s;
+  }
+
+  .chip-del:hover { background: var(--red); }
+  .chip-del:hover svg { stroke: #fff; }
+  .chip-del svg { width: 8px; height: 8px; stroke: #64748b; }
+
+  .save-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: none;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 20px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 12px;
+    color: var(--mid);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .save-contact-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .contacts-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--mid);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+
   /* items section */
   .items-toggle {
     display: flex;
@@ -483,6 +570,12 @@
       <div class="err-msg" id="accountErr">รูปแบบไม่ถูกต้อง กรุณาตรวจสอบ</div>
     </div>
 
+    <!-- Saved contacts -->
+    <div id="contactsSection" style="margin-bottom:20px;display:none">
+      <div class="contacts-label">รายชื่อที่บันทึกไว้</div>
+      <div class="contacts-bar" id="contactsBar"></div>
+    </div>
+
     <!-- Amount field -->
     <div class="field" id="amountField">
       <label>จำนวนเงิน</label>
@@ -543,7 +636,13 @@
         </span>
         <input type="text" id="nameInput" placeholder="เช่น สมชาย ใจดี" maxlength="60">
       </div>
-      <div class="hint">แสดงบนหน้า QR เพื่อให้ผู้จ่ายตรวจสอบ</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+        <div class="hint" style="margin-top:0">แสดงบนหน้า QR เพื่อให้ผู้จ่ายตรวจสอบ</div>
+        <button class="save-contact-btn" onclick="saveContact()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          บันทึกชื่อ-เบอร์นี้
+        </button>
+      </div>
     </div>
 
     <!-- Generate button -->
@@ -626,6 +725,81 @@ function buildPromptPayPayload(account, amount) {
   payload += crc16(payload);
   return payload;
 }
+
+// ---------- Contacts (localStorage) ----------
+function loadContacts() {
+  try { return JSON.parse(localStorage.getItem('pp_contacts') || '[]'); }
+  catch { return []; }
+}
+
+function saveContacts(list) {
+  localStorage.setItem('pp_contacts', JSON.stringify(list));
+}
+
+function renderContacts() {
+  const list = loadContacts();
+  const section = document.getElementById('contactsSection');
+  const bar = document.getElementById('contactsBar');
+  if (list.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  bar.innerHTML = '';
+  list.forEach((c, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'contact-chip';
+    chip.id = 'chip-' + i;
+    chip.innerHTML = `
+      <div onclick="selectContact(${i})">
+        <div class="chip-name">${c.name || c.account}</div>
+        <div class="chip-num">${c.account}</div>
+      </div>
+      <button class="chip-del" onclick="deleteContact(event,${i})" title="ลบ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>`;
+    bar.appendChild(chip);
+  });
+}
+
+function selectContact(i) {
+  const list = loadContacts();
+  const c = list[i];
+  document.getElementById('accountInput').value = c.account;
+  document.getElementById('nameInput').value = c.name || '';
+  // highlight active chip
+  document.querySelectorAll('.contact-chip').forEach((el, idx) => {
+    el.classList.toggle('active', idx === i);
+  });
+}
+
+function saveContact() {
+  const account = document.getElementById('accountInput').value.replace(/[-\s]/g,'');
+  const name = document.getElementById('nameInput').value.trim();
+  if (!account) { alert('กรุณากรอกเบอร์หรือเลขบัตรก่อนบันทึก'); return; }
+  const list = loadContacts();
+  // check duplicate account
+  const exists = list.findIndex(c => c.account === account);
+  if (exists >= 0) {
+    list[exists] = { account, name };
+    alert('อัปเดตรายชื่อแล้ว: ' + (name || account));
+  } else {
+    list.push({ account, name });
+    alert('บันทึกแล้ว: ' + (name || account));
+  }
+  saveContacts(list);
+  renderContacts();
+}
+
+function deleteContact(e, i) {
+  e.stopPropagation();
+  const list = loadContacts();
+  const c = list[i];
+  if (!confirm('ลบ "' + (c.name || c.account) + '" ?')) return;
+  list.splice(i, 1);
+  saveContacts(list);
+  renderContacts();
+}
+
+// init on load
+window.addEventListener('DOMContentLoaded', renderContacts);
 
 // ---------- UI logic ----------
 let qrInstance = null;
