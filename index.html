@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สร้าง QR พร้อมเพย์</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #1a2744;
+    --blue:   #2563eb;
+    --sky:    #60a5fa;
+    --gold:   #f59e0b;
+    --white:  #ffffff;
+    --grey:   #f1f5f9;
+    --mid:    #94a3b8;
+    --text:   #1e293b;
+    --red:    #ef4444;
+  }
+
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a3a8f 0%, #2563eb 100%);
+    padding: 28px 28px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-wrap {
+    width: 48px; height: 48px;
+    background: var(--white);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-wrap svg { width: 32px; height: 32px; }
+
+  .header-text h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 0.01em;
+  }
+
+  .header-text p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 2px;
+  }
+
+  .body { padding: 28px; }
+
+  .field { margin-bottom: 20px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mid);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .input-wrap {
+    position: relative;
+  }
+
+  .input-wrap .icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mid);
+    pointer-events: none;
+  }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    height: 52px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 16px;
+    color: var(--text);
+    padding: 0 16px 0 44px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--grey);
+  }
+
+  input:focus {
+    border-color: var(--blue);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+  }
+
+  input.error { border-color: var(--red); }
+
+  .hint { font-size: 12px; color: var(--mid); margin-top: 6px; }
+  .err-msg { font-size: 12px; color: var(--red); margin-top: 6px; display: none; }
+  .err-msg.show { display: block; }
+
+  /* amount row */
+  .amount-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .currency-badge {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--navy);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 12px;
+    padding: 0 14px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .amount-row input { padding-left: 16px; }
+
+  /* quick amounts */
+  .quick-label {
+    font-size: 12px;
+    color: var(--mid);
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .quick-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .quick-btn {
+    background: var(--grey);
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .quick-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: rgba(37,99,235,0.06);
+  }
+
+  .quick-btn.active {
+    border-color: var(--blue);
+    background: var(--blue);
+    color: var(--white);
+  }
+
+  /* generate button */
+  .gen-btn {
+    width: 100%;
+    height: 54px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+    border-radius: 14px;
+    color: var(--white);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.4);
+  }
+
+  .gen-btn:hover { box-shadow: 0 6px 24px rgba(37,99,235,0.5); transform: translateY(-1px); }
+  .gen-btn:active { transform: translateY(0); }
+
+  /* result */
+  #result {
+    display: none;
+    margin-top: 28px;
+    text-align: center;
+  }
+
+  #result.show { display: block; }
+
+  .result-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mid);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+  }
+
+  .qr-frame {
+    display: inline-block;
+    padding: 16px;
+    background: var(--white);
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+
+  #qrcode canvas, #qrcode img { display: block; }
+
+  .amount-display {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+
+  .amount-display span { font-size: 16px; font-weight: 400; color: var(--mid); }
+
+  .to-display {
+    font-size: 14px;
+    color: var(--mid);
+    margin-bottom: 20px;
+  }
+
+  .save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .save-btn:hover { opacity: 0.85; }
+
+  .divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 24px 0;
+  }
+
+
+  /* items section */
+  .items-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .items-toggle input[type="checkbox"] { display: none; }
+
+  .toggle-track {
+    width: 40px; height: 22px;
+    background: #e2e8f0;
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-track::after {
+    content: '';
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px; left: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+
+  .items-toggle.on .toggle-track { background: var(--blue); }
+  .items-toggle.on .toggle-track::after { transform: translateX(18px); }
+
+  .toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mid);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .items-section { display: none; margin-bottom: 20px; }
+  .items-section.open { display: block; }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr 110px 36px;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+
+  .item-row input {
+    height: 44px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    padding: 0 12px;
+    outline: none;
+    background: var(--grey);
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  .item-row input:focus {
+    border-color: var(--blue);
+    background: #fff;
+  }
+
+  .item-row input[type="number"] { padding-left: 12px; }
+
+  .del-btn {
+    width: 36px; height: 36px;
+    border: none;
+    background: #fee2e2;
+    color: var(--red);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .del-btn:hover { background: #fecaca; }
+
+  .add-item-btn {
+    width: 100%;
+    height: 40px;
+    border: 2px dashed #cbd5e1;
+    background: none;
+    border-radius: 10px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    color: var(--mid);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+    transition: border-color 0.2s, color 0.2s;
+    margin-top: 4px;
+  }
+  .add-item-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .items-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--grey);
+    border-radius: 10px;
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .items-total .total-amt { color: var(--blue); font-size: 18px; }
+
+  /* result items list */
+  .result-items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 12px;
+    text-align: left;
+  }
+  .result-items td { padding: 4px 6px; color: var(--text); }
+  .result-items td:last-child { text-align: right; white-space: nowrap; }
+  .result-items tr.total-row td {
+    border-top: 1px solid #e2e8f0;
+    font-weight: 700;
+    padding-top: 8px;
+    color: var(--navy);
+  }
+
+  /* badge */
+  .pp-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--mid);
+    margin-top: 8px;
+  }
+
+  .pp-badge::before, .pp-badge::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="logo-wrap">
+      <!-- PromptPay-style icon -->
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="48" height="48" rx="10" fill="#1a3a8f"/>
+        <path d="M10 18h4v12h-4zM17 12h4v18h-4zM24 15h4v15h-4zM31 18h4v12h-4z" fill="#f59e0b"/>
+        <path d="M10 32h28" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1>QR พร้อมเพย์</h1>
+      <p>สร้าง QR สำหรับรับเงินทันที</p>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- Account field -->
+    <div class="field">
+      <label>เบอร์มือถือ / เลขบัตรประชาชน</label>
+      <div class="input-wrap">
+        <span class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.56-.56a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/>
+          </svg>
+        </span>
+        <input type="text" id="accountInput" placeholder="0812345678 หรือ 1234567890123" maxlength="17">
+      </div>
+      <div class="hint" id="accountHint">กรอกเบอร์มือถือ 10 หลัก หรือเลขบัตร ปชช. 13 หลัก</div>
+      <div class="err-msg" id="accountErr">รูปแบบไม่ถูกต้อง กรุณาตรวจสอบ</div>
+    </div>
+
+    <!-- Amount field -->
+    <div class="field" id="amountField">
+      <label>จำนวนเงิน</label>
+      <div class="amount-row">
+        <div class="input-wrap">
+          <input type="number" id="amountInput" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="currency-badge">THB ฿</div>
+      </div>
+      <div class="hint">ไม่ระบุจำนวนเงิน = ให้ผู้จ่ายกรอกเอง</div>
+    </div>
+
+    <!-- Quick amounts -->
+    <div id="quickSection">
+      <div class="quick-label">จำนวนที่ใช้บ่อย</div>
+      <div class="quick-btns">
+        <button class="quick-btn" onclick="setAmount(20)">฿20</button>
+        <button class="quick-btn" onclick="setAmount(50)">฿50</button>
+        <button class="quick-btn" onclick="setAmount(100)">฿100</button>
+        <button class="quick-btn" onclick="setAmount(200)">฿200</button>
+        <button class="quick-btn" onclick="setAmount(500)">฿500</button>
+        <button class="quick-btn" onclick="setAmount(1000)">฿1,000</button>
+      </div>
+    </div>
+
+    <!-- Items toggle -->
+    <label class="items-toggle" id="itemsToggle" onclick="toggleItems()">
+      <div class="toggle-track"></div>
+      <span class="toggle-label">เพิ่มรายการสินค้า <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--mid)">(ไม่บังคับ)</span></span>
+    </label>
+
+    <!-- Items section -->
+    <div class="items-section" id="itemsSection">
+      <div class="item-row" style="margin-bottom:4px">
+        <span style="font-size:12px;font-weight:600;color:var(--mid);letter-spacing:0.04em">รายการ</span>
+        <span style="font-size:12px;font-weight:600;color:var(--mid);letter-spacing:0.04em">ราคา (฿)</span>
+        <span></span>
+      </div>
+      <div id="itemsList"></div>
+      <button class="add-item-btn" onclick="addItem()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        เพิ่มรายการ
+      </button>
+      <div class="items-total">
+        <span>รวมทั้งหมด</span>
+        <span class="total-amt" id="itemsTotal">฿0.00</span>
+      </div>
+    </div>
+
+    <!-- Recipient name field (optional) -->
+    <div class="field">
+      <label>ชื่อผู้รับเงิน <span style="font-weight:400;color:var(--mid);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></label>
+      <div class="input-wrap">
+        <span class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <input type="text" id="nameInput" placeholder="เช่น สมชาย ใจดี" maxlength="60">
+      </div>
+      <div class="hint">แสดงบนหน้า QR เพื่อให้ผู้จ่ายตรวจสอบ</div>
+    </div>
+
+    <!-- Generate button -->
+    <button class="gen-btn" onclick="generate()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+        <path d="M14 14h.01M14 17h.01M17 14h.01M17 17h3"/>
+      </svg>
+      สร้าง QR Code
+    </button>
+
+    <!-- Result -->
+    <div id="result">
+      <div class="divider"></div>
+      <div class="result-header">สแกนเพื่อชำระเงิน</div>
+      <div class="qr-frame">
+        <div id="qrcode"></div>
+      </div>
+      <div class="amount-display" id="amountDisplay"></div>
+      <div id="resultItems" style="width:100%;padding:0 4px;margin-bottom:4px;display:none"></div>
+      <div class="to-display" id="toDisplay"></div>
+      <button class="save-btn" onclick="saveQR()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        บันทึกรูป QR
+      </button>
+      <div class="pp-badge">PromptPay · Bank of Thailand Standard</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- PromptPay payload builder ----------
+function crc16(data) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc ^= data.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+    }
+  }
+  return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+}
+
+function tlv(tag, value) {
+  const len = String(value.length).padStart(2, '0');
+  return `${tag}${len}${value}`;
+}
+
+function buildPromptPayPayload(account, amount) {
+  // normalize
+  account = account.replace(/[-\s]/g, '');
+
+  let proxyType, proxyValue;
+  if (account.length === 10) {
+    // mobile
+    proxyType = '01';
+    proxyValue = '0066' + account.slice(1); // +66 format
+  } else {
+    // national ID or tax ID (13 digits)
+    proxyType = '02';
+    proxyValue = account;
+  }
+
+  const aid = 'A000000677010111';                  // PromptPay AID (value only, 16 chars)
+  const merchantInfo = tlv('00', aid) + tlv(proxyType, proxyValue);
+
+  let payload =
+    tlv('00', '01') +                             // payload format indicator
+    tlv('01', '11') +                             // point of initiation: static(12) / dynamic(11 with amount)
+    tlv('29', merchantInfo) +                     // merchant account info
+    tlv('52', '0000') +                           // merchant category code
+    tlv('53', '764') +                            // currency (THB)
+    (amount ? tlv('54', amount.toFixed(2)) : '') +// transaction amount
+    tlv('58', 'TH') +                             // country code
+    '6304';                                       // CRC tag placeholder
+
+  payload += crc16(payload);
+  return payload;
+}
+
+// ---------- UI logic ----------
+let qrInstance = null;
+let itemsOpen = false;
+let itemCount = 0;
+
+// --- items toggle ---
+function toggleItems() {
+  itemsOpen = !itemsOpen;
+  const toggle = document.getElementById('itemsToggle');
+  const section = document.getElementById('itemsSection');
+  const amountField = document.getElementById('amountField');
+  const quickSection = document.getElementById('quickSection');
+
+  toggle.classList.toggle('on', itemsOpen);
+  section.classList.toggle('open', itemsOpen);
+
+  if (itemsOpen) {
+    // hide manual amount & quick buttons
+    amountField.style.display = 'none';
+    quickSection.style.display = 'none';
+    if (document.getElementById('itemsList').children.length === 0) addItem();
+  } else {
+    amountField.style.display = '';
+    quickSection.style.display = '';
+  }
+}
+
+function addItem() {
+  const list = document.getElementById('itemsList');
+  const id = ++itemCount;
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.id = `item-${id}`;
+  row.innerHTML = `
+    <input type="text" placeholder="ชื่อรายการ" oninput="calcTotal()">
+    <input type="number" placeholder="0.00" min="0" step="0.01" oninput="calcTotal()">
+    <button class="del-btn" onclick="removeItem(${id})">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function removeItem(id) {
+  const el = document.getElementById(`item-${id}`);
+  if (el) el.remove();
+  calcTotal();
+  if (document.getElementById('itemsList').children.length === 0) addItem();
+}
+
+function calcTotal() {
+  let total = 0;
+  document.querySelectorAll('#itemsList .item-row input[type="number"]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v) && v > 0) total += v;
+  });
+  document.getElementById('itemsTotal').textContent =
+    '฿' + total.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return total;
+}
+
+function getItems() {
+  const items = [];
+  document.querySelectorAll('#itemsList .item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    const price = parseFloat(inputs[1].value);
+    if (name || (!isNaN(price) && price > 0)) {
+      items.push({ name: name || '-', price: isNaN(price) ? 0 : price });
+    }
+  });
+  return items;
+}
+
+// --- amount quick buttons ---
+function setAmount(val) {
+  document.getElementById('amountInput').value = val;
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+document.getElementById('amountInput').addEventListener('input', () => {
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+  const val = parseFloat(document.getElementById('amountInput').value);
+  document.querySelectorAll('.quick-btn').forEach(b => {
+    if (parseFloat(b.textContent.replace('฿','').replace(',','')) === val) b.classList.add('active');
+  });
+});
+
+function validate() {
+  const raw = document.getElementById('accountInput').value.replace(/[-\s]/g, '');
+  const input = document.getElementById('accountInput');
+  const err = document.getElementById('accountErr');
+
+  if (raw.length === 10 && /^0[6-9]\d{8}$/.test(raw)) {
+    input.classList.remove('error'); err.classList.remove('show');
+    return raw;
+  }
+  if (raw.length === 13 && /^\d{13}$/.test(raw)) {
+    input.classList.remove('error'); err.classList.remove('show');
+    return raw;
+  }
+  input.classList.add('error'); err.classList.add('show');
+  return null;
+}
+
+function generate() {
+  const account = validate();
+  if (!account) return;
+
+  let amount = null;
+
+  if (itemsOpen) {
+    const total = calcTotal();
+    amount = total > 0 ? total : null;
+  } else {
+    const amountStr = document.getElementById('amountInput').value;
+    amount = amountStr ? parseFloat(amountStr) : null;
+    if (amount !== null && (isNaN(amount) || amount < 0)) {
+      document.getElementById('amountInput').style.borderColor = 'var(--red)';
+      return;
+    }
+    document.getElementById('amountInput').style.borderColor = '';
+  }
+
+  const payload = buildPromptPayPayload(account, amount);
+
+  // render QR
+  const container = document.getElementById('qrcode');
+  container.innerHTML = '';
+
+  qrInstance = new QRCode(container, {
+    text: payload,
+    width: 220,
+    height: 220,
+    colorDark: '#1a2744',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  // amount label
+  const ad = document.getElementById('amountDisplay');
+  if (amount) {
+    ad.innerHTML = `฿${amount.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})} <span>บาท</span>`;
+  } else {
+    ad.innerHTML = `<span style="font-size:15px">ไม่ระบุจำนวน — ผู้จ่ายกรอกเอง</span>`;
+  }
+
+  // items list in result
+  const resultItems = document.getElementById('resultItems');
+  if (itemsOpen) {
+    const items = getItems();
+    if (items.length > 0) {
+      let rows = items.map(it =>
+        `<tr><td>${it.name}</td><td>฿${it.price.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`
+      ).join('');
+      if (amount) {
+        rows += `<tr class="total-row"><td>รวม</td><td>฿${amount.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+      }
+      resultItems.innerHTML = `<table class="result-items">${rows}</table>`;
+      resultItems.style.display = 'block';
+    } else {
+      resultItems.style.display = 'none';
+    }
+  } else {
+    resultItems.style.display = 'none';
+  }
+
+  // to label
+  const disp = account.length === 10
+    ? `มือถือ ${account.slice(0,3)}-${account.slice(3,6)}-${account.slice(6)}`
+    : `บัตร ปชช. ${account.slice(0,1)}-${account.slice(1,5)}-${account.slice(5,10)}-${account.slice(10,12)}-${account.slice(12)}`;
+  const name = document.getElementById('nameInput').value.trim();
+  const toEl = document.getElementById('toDisplay');
+  if (name) {
+    toEl.innerHTML = `<strong style="color:var(--text);font-size:16px">${name}</strong><br><span style="font-size:13px">${disp}</span>`;
+  } else {
+    toEl.textContent = `ไปยัง ${disp}`;
+  }
+
+  document.getElementById('result').classList.add('show');
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function saveQR() {
+  const qrCanvas = document.querySelector('#qrcode canvas');
+  if (!qrCanvas) return;
+
+  await document.fonts.ready;
+
+  const FONT = "'Sarabun', 'Noto Sans Thai', Tahoma, sans-serif";
+  const pad  = 28;
+  const QRW  = qrCanvas.width;
+  const W    = QRW + pad * 2;
+  const scale = 2;
+
+  const name = document.getElementById('nameInput').value.trim();
+  const amountEl = document.getElementById('amountDisplay');
+  const amountText = amountEl ? amountEl.innerText.replace('บาท','').trim() : '';
+
+  const accountRaw = document.getElementById('accountInput').value.replace(/[-\s]/g,'');
+  const dispAcct = accountRaw.length === 10
+    ? 'มือถือ ' + accountRaw.slice(0,3) + '-' + accountRaw.slice(3,6) + '-' + accountRaw.slice(6)
+    : 'บัตร ปชช. ' + accountRaw.slice(0,1) + '-' + accountRaw.slice(1,5) + '-' + accountRaw.slice(5,10) + '-' + accountRaw.slice(10,12) + '-' + accountRaw.slice(12);
+
+  const resultItemsEl = document.getElementById('resultItems');
+  const hasItems = resultItemsEl && resultItemsEl.style.display !== 'none';
+  const rows = [];
+  if (hasItems) {
+    document.querySelectorAll('#itemsList .item-row').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      const n = inputs[0].value.trim();
+      const p = parseFloat(inputs[1].value);
+      if (n || (!isNaN(p) && p > 0)) rows.push({ name: n || '-', price: isNaN(p) ? 0 : p });
+    });
+  }
+
+  const lineH = 26;
+  const hdrH  = 50;
+  const qrPad = 14;
+
+  let H = hdrH + qrPad;
+  if (name) H += 32;
+  H += 22;
+  H += qrPad + QRW + qrPad;
+  if (amountText) H += 42;
+  if (rows.length > 0) H += 14 + rows.length * lineH + 14 + lineH + 14;
+  H += 32 + pad;
+
+  const out = document.createElement('canvas');
+  out.width  = W * scale;
+  out.height = H * scale;
+  const ctx  = out.getContext('2d');
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // header
+  ctx.fillStyle = '#1a2744';
+  ctx.fillRect(0, 0, W, hdrH);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px ' + FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('QR พร้อมเพย์', W / 2, hdrH / 2);
+
+  let y = hdrH + qrPad;
+  ctx.textBaseline = 'alphabetic';
+
+  if (name) {
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 18px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.fillText(name, W / 2, y + 20);
+    y += 32;
+  }
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '13px ' + FONT;
+  ctx.textAlign = 'center';
+  ctx.fillText(dispAcct, W / 2, y + 14);
+  y += 22;
+
+  // QR
+  y += qrPad;
+  const qrX = (W - QRW) / 2;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(qrX - 3, y - 3, QRW + 6, QRW + 6);
+  ctx.drawImage(qrCanvas, qrX, y);
+  y += QRW + qrPad;
+
+  // amount
+  if (amountText) {
+    ctx.fillStyle = '#1a2744';
+    ctx.font = 'bold 26px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.fillText(amountText + ' บาท', W / 2, y + 28);
+    y += 42;
+  }
+
+  // items table
+  if (rows.length > 0) {
+    const tPad = 20;
+    y += 14;
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tPad, y); ctx.lineTo(W - tPad, y); ctx.stroke();
+    y += lineH - 4;
+
+    rows.forEach(item => {
+      ctx.font = '14px ' + FONT;
+      ctx.fillStyle = '#1e293b';
+      ctx.textAlign = 'left';
+      ctx.fillText(item.name, tPad, y);
+      ctx.textAlign = 'right';
+      ctx.fillText('฿' + item.price.toLocaleString('th-TH', {minimumFractionDigits:2}), W - tPad, y);
+      y += lineH;
+    });
+
+    y += 6;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.beginPath(); ctx.moveTo(tPad, y); ctx.lineTo(W - tPad, y); ctx.stroke();
+    y += lineH;
+
+    const total = rows.reduce((s, r) => s + r.price, 0);
+    ctx.font = 'bold 15px ' + FONT;
+    ctx.fillStyle = '#1a2744';
+    ctx.textAlign = 'left';
+    ctx.fillText('รวม', tPad, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('฿' + total.toLocaleString('th-TH', {minimumFractionDigits:2}), W - tPad, y);
+    y += 14;
+  }
+
+  // footer
+  y += 16;
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '11px ' + FONT;
+  ctx.textAlign = 'center';
+  ctx.fillText('PromptPay · Bank of Thailand Standard', W / 2, y);
+
+  const a = document.createElement('a');
+  a.download = 'promptpay-qr.png';
+  a.href = out.toDataURL('image/png');
+  a.click();
+}
+
+// enter to generate
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') generate();
+});
+</script>
+</body>
+</html>
