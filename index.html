@@ -555,7 +555,7 @@
   </div>
 
   <div class="body">
-    <!-- Account field -->
+    <!-- Account + Name + Save as one group -->
     <div class="field">
       <label>เบอร์มือถือ / เลขบัตรประชาชน</label>
       <div class="input-wrap">
@@ -568,6 +568,26 @@
       </div>
       <div class="hint" id="accountHint">กรอกเบอร์มือถือ 10 หลัก หรือเลขบัตร ปชช. 13 หลัก</div>
       <div class="err-msg" id="accountErr">รูปแบบไม่ถูกต้อง กรุณาตรวจสอบ</div>
+    </div>
+
+    <!-- Name + Save row -->
+    <div class="field">
+      <label>ชื่อผู้รับเงิน <span style="font-weight:400;color:var(--mid);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="input-wrap" style="flex:1">
+          <span class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <input type="text" id="nameInput" placeholder="เช่น สมชาย ใจดี" maxlength="60">
+        </div>
+        <button onclick="saveContact()" style="height:52px;padding:0 16px;background:var(--navy);border:none;border-radius:12px;color:#fff;font-family:Sarabun,Tahoma,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          บันทึก
+        </button>
+      </div>
+      <div class="hint" style="margin-top:6px">กรอกแล้วกด "บันทึก" เพื่อเก็บไว้ใช้ครั้งหน้า</div>
     </div>
 
     <!-- Saved contacts -->
@@ -622,26 +642,6 @@
       <div class="items-total">
         <span>รวมทั้งหมด</span>
         <span class="total-amt" id="itemsTotal">฿0.00</span>
-      </div>
-    </div>
-
-    <!-- Recipient name field (optional) -->
-    <div class="field">
-      <label>ชื่อผู้รับเงิน <span style="font-weight:400;color:var(--mid);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></label>
-      <div class="input-wrap">
-        <span class="icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
-        </span>
-        <input type="text" id="nameInput" placeholder="เช่น สมชาย ใจดี" maxlength="60">
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-        <div class="hint" style="margin-top:0">แสดงบนหน้า QR เพื่อให้ผู้จ่ายตรวจสอบ</div>
-        <button class="save-contact-btn" onclick="saveContact()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          บันทึกชื่อ-เบอร์นี้
-        </button>
       </div>
     </div>
 
