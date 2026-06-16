@@ -726,6 +726,49 @@ function buildPromptPayPayload(account, amount) {
   return payload;
 }
 
+// ---------- Toast ----------
+function showToast(msg, color) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a2744;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;font-family:Sarabun,Tahoma,sans-serif;opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:9999;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = color || '#1a2744';
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2200);
+}
+
+// ---------- Inline confirm (mobile-safe) ----------
+function showConfirm(msg, onYes) {
+  let overlay = document.getElementById('confirmOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'confirmOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:9998;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+        <div id="confirmMsg" style="font-size:15px;color:#1e293b;font-family:Sarabun,Tahoma,sans-serif;margin-bottom:20px;text-align:center;line-height:1.5"></div>
+        <div style="display:flex;gap:10px">
+          <button id="confirmNo" style="flex:1;height:44px;border:2px solid #e2e8f0;background:#fff;border-radius:10px;font-family:Sarabun,Tahoma,sans-serif;font-size:15px;color:#64748b;cursor:pointer">ยกเลิก</button>
+          <button id="confirmYes" style="flex:1;height:44px;border:none;background:#ef4444;border-radius:10px;font-family:Sarabun,Tahoma,sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer">ลบ</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('confirmMsg').textContent = msg;
+  overlay.style.display = 'flex';
+  document.getElementById('confirmNo').onclick = () => { overlay.style.display = 'none'; };
+  document.getElementById('confirmYes').onclick = () => { overlay.style.display = 'none'; onYes(); };
+}
+
 // ---------- Contacts (localStorage) ----------
 function loadContacts() {
   try { return JSON.parse(localStorage.getItem('pp_contacts') || '[]'); }
@@ -733,13 +776,14 @@ function loadContacts() {
 }
 
 function saveContacts(list) {
-  localStorage.setItem('pp_contacts', JSON.stringify(list));
+  try { localStorage.setItem('pp_contacts', JSON.stringify(list)); } catch(e) {}
 }
 
 function renderContacts() {
   const list = loadContacts();
   const section = document.getElementById('contactsSection');
   const bar = document.getElementById('contactsBar');
+  if (!section || !bar) return;
   if (list.length === 0) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   bar.innerHTML = '';
@@ -747,10 +791,12 @@ function renderContacts() {
     const chip = document.createElement('div');
     chip.className = 'contact-chip';
     chip.id = 'chip-' + i;
+    const displayName = c.name || c.account;
+    const displayNum = c.name ? c.account : '';
     chip.innerHTML = `
-      <div onclick="selectContact(${i})">
-        <div class="chip-name">${c.name || c.account}</div>
-        <div class="chip-num">${c.account}</div>
+      <div style="flex:1;min-width:0" onclick="selectContact(${i})">
+        <div class="chip-name">${displayName}</div>
+        ${displayNum ? `<div class="chip-num">${displayNum}</div>` : ''}
       </div>
       <button class="chip-del" onclick="deleteContact(event,${i})" title="ลบ">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -764,25 +810,26 @@ function selectContact(i) {
   const c = list[i];
   document.getElementById('accountInput').value = c.account;
   document.getElementById('nameInput').value = c.name || '';
-  // highlight active chip
   document.querySelectorAll('.contact-chip').forEach((el, idx) => {
     el.classList.toggle('active', idx === i);
   });
+  // clear validation error if any
+  document.getElementById('accountInput').classList.remove('error');
+  document.getElementById('accountErr').classList.remove('show');
 }
 
 function saveContact() {
   const account = document.getElementById('accountInput').value.replace(/[-\s]/g,'');
   const name = document.getElementById('nameInput').value.trim();
-  if (!account) { alert('กรุณากรอกเบอร์หรือเลขบัตรก่อนบันทึก'); return; }
+  if (!account) { showToast('กรุณากรอกเบอร์หรือเลขบัตรก่อนบันทึก', '#ef4444'); return; }
   const list = loadContacts();
-  // check duplicate account
   const exists = list.findIndex(c => c.account === account);
   if (exists >= 0) {
     list[exists] = { account, name };
-    alert('อัปเดตรายชื่อแล้ว: ' + (name || account));
+    showToast('✓ อัปเดตแล้ว: ' + (name || account));
   } else {
     list.push({ account, name });
-    alert('บันทึกแล้ว: ' + (name || account));
+    showToast('✓ บันทึกแล้ว: ' + (name || account));
   }
   saveContacts(list);
   renderContacts();
@@ -792,14 +839,18 @@ function deleteContact(e, i) {
   e.stopPropagation();
   const list = loadContacts();
   const c = list[i];
-  if (!confirm('ลบ "' + (c.name || c.account) + '" ?')) return;
-  list.splice(i, 1);
-  saveContacts(list);
-  renderContacts();
+  showConfirm('ลบ "' + (c.name || c.account) + '" ออกจากรายชื่อ?', () => {
+    const updated = loadContacts();
+    updated.splice(i, 1);
+    saveContacts(updated);
+    renderContacts();
+    showToast('ลบแล้ว', '#ef4444');
+  });
 }
 
-// init on load
-window.addEventListener('DOMContentLoaded', renderContacts);
+// init — fire on both events for reliability
+document.addEventListener('DOMContentLoaded', renderContacts);
+window.addEventListener('load', renderContacts);
 
 // ---------- UI logic ----------
 let qrInstance = null;
