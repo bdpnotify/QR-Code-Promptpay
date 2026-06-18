@@ -1057,14 +1057,18 @@ async function saveQR() {
   const qrCanvas = document.querySelector('#qrcode canvas');
   if (!qrCanvas) return;
 
+  const FONT = "'Sarabun', 'Noto Sans Thai', Tahoma, sans-serif";
+
+  // Force the real font into the canvas (DOM-ready != canvas-ready, esp. on iOS).
+  try {
+    await Promise.all(
+      ['700 26px','700 18px','700 16px','700 15px','400 14px','400 13px','400 11px']
+        .map(f => document.fonts.load(f + " 'Sarabun'"))
+    );
+  } catch (e) {}
   await document.fonts.ready;
 
-  const FONT = "'Sarabun', 'Noto Sans Thai', Tahoma, sans-serif";
-  const pad  = 28;
-  const QRW  = qrCanvas.width;
-  const W    = QRW + pad * 2;
-  const scale = 2;
-
+  // ---- gather content ----
   const name = document.getElementById('nameInput').value.trim();
   const amountEl = document.getElementById('amountDisplay');
   const amountText = amountEl ? amountEl.innerText.replace('บาท','').trim() : '';
@@ -1085,11 +1089,44 @@ async function saveQR() {
       if (n || (!isNaN(p) && p > 0)) rows.push({ name: n || '-', price: isNaN(p) ? 0 : p });
     });
   }
+  const fmt = v => '฿' + v.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
 
-  const lineH = 26;
-  const hdrH  = 50;
-  const qrPad = 14;
+  // ---- measure every line so the canvas fits the widest one (font-independent) ----
+  const scale = 2;
+  const pad   = 28;
+  const QRW   = qrCanvas.width;
+  const lineH = 26, hdrH = 50, qrPad = 14;
+  const ROWGAP = 28;          // min space between an item name and its price
+  const MAXW  = 600;          // safety cap so a very long name can't blow up the image
 
+  const mctx = document.createElement('canvas').getContext('2d');
+  const mw = (text, font) => { mctx.font = font + ' ' + FONT; return mctx.measureText(text).width; };
+  // truncate with … so a string fits maxPx in the given font
+  const fit = (text, font, maxPx) => {
+    if (mw(text, font) <= maxPx) return text;
+    let s = text;
+    while (s.length > 1 && mw(s + '…', font) > maxPx) s = s.slice(0, -1);
+    return s + '…';
+  };
+
+  let contentW = QRW;         // QR anchors the minimum width
+  if (name)       contentW = Math.max(contentW, mw(name, 'bold 18px'));
+  contentW = Math.max(contentW, mw(dispAcct, '13px'));
+  if (amountText) contentW = Math.max(contentW, mw(amountText + ' บาท', 'bold 26px'));
+  contentW = Math.max(contentW, mw('PromptPay · Bank of Thailand Standard', '11px'));
+  rows.forEach(it => {
+    contentW = Math.max(contentW, mw(it.name, '14px') + ROWGAP + mw(fmt(it.price), '14px'));
+  });
+  if (rows.length) {
+    const total = rows.reduce((s, r) => s + r.price, 0);
+    contentW = Math.max(contentW, mw('รวม', 'bold 15px') + ROWGAP + mw(fmt(total), 'bold 15px'));
+  }
+  contentW = Math.min(Math.ceil(contentW), MAXW);
+
+  const W    = contentW + pad * 2;
+  const tPad = pad;
+
+  // ---- heights ----
   let H = hdrH + qrPad;
   if (name) H += 32;
   H += 22;
@@ -1127,7 +1164,7 @@ async function saveQR() {
     y += 32;
   }
 
-  ctx.fillStyle = '#94a3b8';
+  ctx.fillStyle = '#64748b';
   ctx.font = '13px ' + FONT;
   ctx.textAlign = 'center';
   ctx.fillText(dispAcct, W / 2, y + 14);
@@ -1152,7 +1189,6 @@ async function saveQR() {
 
   // items table
   if (rows.length > 0) {
-    const tPad = 20;
     y += 14;
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
@@ -1162,10 +1198,12 @@ async function saveQR() {
     rows.forEach(item => {
       ctx.font = '14px ' + FONT;
       ctx.fillStyle = '#1e293b';
-      ctx.textAlign = 'left';
-      ctx.fillText(item.name, tPad, y);
+      const priceStr = fmt(item.price);
+      const priceW   = mw(priceStr, '14px');
       ctx.textAlign = 'right';
-      ctx.fillText('฿' + item.price.toLocaleString('th-TH', {minimumFractionDigits:2}), W - tPad, y);
+      ctx.fillText(priceStr, W - tPad, y);
+      ctx.textAlign = 'left';
+      ctx.fillText(fit(item.name, '14px', contentW - priceW - ROWGAP), tPad, y);
       y += lineH;
     });
 
@@ -1180,7 +1218,7 @@ async function saveQR() {
     ctx.textAlign = 'left';
     ctx.fillText('รวม', tPad, y);
     ctx.textAlign = 'right';
-    ctx.fillText('฿' + total.toLocaleString('th-TH', {minimumFractionDigits:2}), W - tPad, y);
+    ctx.fillText(fmt(total), W - tPad, y);
     y += 14;
   }
 
