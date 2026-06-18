@@ -26,7 +26,7 @@
     --gold:   #f59e0b;
     --white:  #ffffff;
     --grey:   #f1f5f9;
-    --mid:    #94a3b8;
+    --mid:    #64748b;
     --text:   #1e293b;
     --red:    #ef4444;
   }
@@ -557,14 +557,14 @@
   <div class="body">
     <!-- Account + Name + Save as one group -->
     <div class="field">
-      <label>เบอร์มือถือ / เลขบัตรประชาชน</label>
+      <label for="accountInput">เบอร์มือถือ / เลขบัตรประชาชน</label>
       <div class="input-wrap">
-        <span class="icon">
+        <span class="icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.56-.56a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/>
           </svg>
         </span>
-        <input type="text" id="accountInput" placeholder="0812345678 หรือ 1234567890123" maxlength="17">
+        <input type="text" id="accountInput" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0812345678 หรือ 1234567890123" maxlength="17">
       </div>
       <div class="hint" id="accountHint">กรอกเบอร์มือถือ 10 หลัก หรือเลขบัตร ปชช. 13 หลัก</div>
       <div class="err-msg" id="accountErr">รูปแบบไม่ถูกต้อง กรุณาตรวจสอบ</div>
@@ -572,17 +572,17 @@
 
     <!-- Name + Save row -->
     <div class="field">
-      <label>ชื่อผู้รับเงิน <span style="font-weight:400;color:var(--mid);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></label>
+      <label for="nameInput">ชื่อผู้รับเงิน <span style="font-weight:400;color:var(--mid);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
         <div class="input-wrap" style="flex:1">
-          <span class="icon">
+          <span class="icon" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
           </span>
           <input type="text" id="nameInput" placeholder="เช่น สมชาย ใจดี" maxlength="60">
         </div>
-        <button onclick="saveContact()" style="height:52px;padding:0 16px;background:var(--navy);border:none;border-radius:12px;color:#fff;font-family:Sarabun,Tahoma,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap">
+        <button onclick="saveContact()" aria-label="บันทึกรายชื่อ" style="height:52px;padding:0 16px;background:var(--navy);border:none;border-radius:12px;color:#fff;font-family:Sarabun,Tahoma,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           บันทึก
         </button>
@@ -598,10 +598,10 @@
 
     <!-- Amount field -->
     <div class="field" id="amountField">
-      <label>จำนวนเงิน</label>
+      <label for="amountInput">จำนวนเงิน</label>
       <div class="amount-row">
         <div class="input-wrap">
-          <input type="number" id="amountInput" placeholder="0.00" min="0" step="0.01">
+          <input type="number" id="amountInput" inputmode="decimal" placeholder="0.00" min="0" step="0.01">
         </div>
         <div class="currency-badge">THB ฿</div>
       </div>
@@ -677,6 +677,12 @@
 </div>
 
 <script>
+// ---------- Escape HTML (prevent XSS from user-entered names) ----------
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // ---------- PromptPay payload builder ----------
 function crc16(data) {
   let crc = 0xFFFF;
@@ -795,10 +801,10 @@ function renderContacts() {
     const displayNum = c.name ? c.account : '';
     chip.innerHTML = `
       <div style="flex:1;min-width:0" onclick="selectContact(${i})">
-        <div class="chip-name">${displayName}</div>
-        ${displayNum ? `<div class="chip-num">${displayNum}</div>` : ''}
+        <div class="chip-name">${esc(displayName)}</div>
+        ${displayNum ? `<div class="chip-num">${esc(displayNum)}</div>` : ''}
       </div>
-      <button class="chip-del" onclick="deleteContact(event,${i})" title="ลบ">
+      <button class="chip-del" onclick="deleteContact(event,${i})" aria-label="ลบรายชื่อ" title="ลบ">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>`;
     bar.appendChild(chip);
@@ -888,7 +894,7 @@ function addItem() {
   row.innerHTML = `
     <input type="text" placeholder="ชื่อรายการ" oninput="calcTotal()">
     <input type="number" placeholder="0.00" min="0" step="0.01" oninput="calcTotal()">
-    <button class="del-btn" onclick="removeItem(${id})">
+    <button class="del-btn" onclick="removeItem(${id})" aria-label="ลบรายการ">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>`;
   list.appendChild(row);
@@ -929,8 +935,10 @@ function getItems() {
 // --- amount quick buttons ---
 function setAmount(val) {
   document.getElementById('amountInput').value = val;
-  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  document.querySelectorAll('.quick-btn').forEach(b => {
+    const bv = parseFloat(b.textContent.replace('฿','').replace(',',''));
+    b.classList.toggle('active', bv === val);
+  });
 }
 
 document.getElementById('amountInput').addEventListener('input', () => {
@@ -983,14 +991,23 @@ function generate() {
   const container = document.getElementById('qrcode');
   container.innerHTML = '';
 
-  qrInstance = new QRCode(container, {
-    text: payload,
-    width: 220,
-    height: 220,
-    colorDark: '#1a2744',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.M
-  });
+  if (typeof QRCode === 'undefined') {
+    showToast('โหลดตัวสร้าง QR ไม่สำเร็จ กรุณาเช็คอินเทอร์เน็ตแล้วรีเฟรช', '#ef4444');
+    return;
+  }
+  try {
+    qrInstance = new QRCode(container, {
+      text: payload,
+      width: 220,
+      height: 220,
+      colorDark: '#1a2744',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch (err) {
+    showToast('สร้าง QR ไม่สำเร็จ', '#ef4444');
+    return;
+  }
 
   // amount label
   const ad = document.getElementById('amountDisplay');
@@ -1006,7 +1023,7 @@ function generate() {
     const items = getItems();
     if (items.length > 0) {
       let rows = items.map(it =>
-        `<tr><td>${it.name}</td><td>฿${it.price.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`
+        `<tr><td>${esc(it.name)}</td><td>฿${it.price.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`
       ).join('');
       if (amount) {
         rows += `<tr class="total-row"><td>รวม</td><td>฿${amount.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
@@ -1174,15 +1191,64 @@ async function saveQR() {
   ctx.textAlign = 'center';
   ctx.fillText('PromptPay · Bank of Thailand Standard', W / 2, y);
 
-  const a = document.createElement('a');
-  a.download = 'promptpay-qr.png';
-  a.href = out.toDataURL('image/png');
-  a.click();
+  // ---- Cross-platform save ----
+  // Strategy: Blob (reliable, no data-URL size limit)
+  //   1) Web Share API w/ file  → native "Save to Photos / Files / LINE" (iOS 15+ & Android) — consistent
+  //   2) <a download> via blob  → desktop & Android without share
+  //   3) open blob in new tab   → old iOS Safari where download is ignored (long-press to save)
+  const fileName = 'promptpay-qr.png';
+
+  const blob = await new Promise(res => out.toBlob(res, 'image/png'));
+  if (!blob) {
+    // last-resort fallback for very old engines
+    const a = document.createElement('a');
+    a.download = fileName;
+    a.href = out.toDataURL('image/png');
+    a.click();
+    return;
+  }
+
+  const file = new File([blob], fileName, { type: 'image/png' });
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  // 1) Native share sheet
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'QR พร้อมเพย์' });
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // user closed the sheet — done
+      // otherwise fall through to download
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+
+  // 2) Direct download (desktop / Android)
+  if (!isIOS) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    showToast('✓ บันทึกรูป QR แล้ว');
+    return;
+  }
+
+  // 3) iOS without share support — open the image so the user can long-press → Save Image
+  window.open(url, '_blank');
+  showToast('กดค้างที่รูปเพื่อบันทึกลงอัลบั้ม', '#1a2744');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-// enter to generate
+// enter to generate — only when typing in the account or amount field
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') generate();
+  if (e.key === 'Enter' && (e.target.id === 'accountInput' || e.target.id === 'amountInput')) {
+    generate();
+  }
 });
 
 // register service worker for PWA
