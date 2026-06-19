@@ -1046,8 +1046,9 @@ async function saveQR() {
   const qrCanvas = document.querySelector('#qrcode canvas');
   if (!qrCanvas) return;
 
-  // เปลี่ยนมาใช้ System Font ของเครื่องโดยตรงในการวาดรูป เพื่อแก้บั๊ก iOS โหลดฟอนต์ไม่ทัน 100%
-  const FONT = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+  // ถอด system-ui ออกเพื่อหนีบั๊กตัวอักษรซ้อนทับของ iOS Safari
+  // ใช้ฟอนต์มาตรฐานแทน ซึ่งบน iOS จะแสดงผลได้สวยงามและช่องไฟปกติ 100%
+  const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
   // ---- ดึงข้อมูลจากหน้าแอป ----
   const name = document.getElementById('nameInput').value.trim();
@@ -1072,16 +1073,16 @@ async function saveQR() {
   }
   const fmt = v => '฿' + v.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
 
-  // ---- ตั้งค่าขนาดโครงสร้างแบบคงที่ (Fixed Width Template) ไร้กังวลเรื่องขนาดอักษรเพี้ยน ----
+  // ---- ตั้งค่าขนาดโครงสร้างแบบคงที่ (Fixed Width Template) ----
   const scale = 2;
-  const W = 420; // บังคับความกว้างรูปเท่ากับหน้ากากแอปพอดี
+  const W = 420; 
   const pad = 32;
   const QRW = 220;
   const lineH = 26;
   const hdrH = 55;
   const qrPad = 16;
 
-  // ระบบตัดคำอัจฉริยะ (ทำงานได้เสถียร 100% เพราะอิงฟอนต์ระบบเครื่อง)
+  // ระบบตัดคำ
   const mctx = document.createElement('canvas').getContext('2d');
   const mw = (text, font) => { mctx.font = font + ' ' + FONT; return mctx.measureText(text).width; };
   const fit = (text, font, maxPx) => {
@@ -1091,7 +1092,6 @@ async function saveQR() {
     return s + '…';
   };
 
-  // คำนวณความสูงแปรผันตามจำนวนสินค้าที่เพิ่มเข้ามาเท่านั้น
   let H = hdrH + qrPad;
   if (name) H += 32;
   H += 22; 
@@ -1106,11 +1106,10 @@ async function saveQR() {
   const ctx  = out.getContext('2d');
   ctx.scale(scale, scale);
 
-  // เทพื้นหลังรูปภาพสีขาว
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  // วาดแบนเนอร์หัวการ์ดสีน้ำเงิน
+  // วาดแบนเนอร์
   ctx.fillStyle = '#1a2744';
   ctx.fillRect(0, 0, W, hdrH);
   ctx.fillStyle = '#ffffff';
@@ -1122,7 +1121,6 @@ async function saveQR() {
   let y = hdrH + qrPad;
   ctx.textBaseline = 'alphabetic';
 
-  // วาดชื่อผู้รับเงิน (ชิดกลาง)
   if (name) {
     ctx.fillStyle = '#1e293b';
     ctx.font = 'bold 18px ' + FONT;
@@ -1131,14 +1129,13 @@ async function saveQR() {
     y += 32;
   }
 
-  // วาดเลขบัญชี/เบอร์โทร (ชิดกลาง)
   ctx.fillStyle = '#64748b';
   ctx.font = '14px ' + FONT;
   ctx.textAlign = 'center';
   ctx.fillText(dispAcct, W / 2, y + 14);
   y += 22;
 
-  // วาดรูปภาพ QR Code (กึ่งกลางเป๊ะ)
+  // วาด QR
   y += qrPad;
   const qrX = (W - QRW) / 2;
   ctx.fillStyle = '#ffffff';
@@ -1146,7 +1143,7 @@ async function saveQR() {
   ctx.drawImage(qrCanvas, qrX, y);
   y += QRW + qrPad;
 
-  // วาดจำนวนเงิน (ชิดกลาง ตัวหนาชัดเจน)
+  // วาดจำนวนเงิน
   if (amountText) {
     ctx.fillStyle = '#1a2744';
     ctx.font = 'bold 26px ' + FONT;
@@ -1155,7 +1152,7 @@ async function saveQR() {
     y += 42;
   }
 
-  // วาดตารางรายการสินค้า (กรณีผู้ใช้เปิดฟังก์ชันลิสต์สินค้า)
+  // วาดตาราง
   if (rows.length > 0) {
     y += 14;
     ctx.strokeStyle = '#e2e8f0';
@@ -1172,11 +1169,9 @@ async function saveQR() {
       const priceStr = fmt(item.price);
       const priceW   = mw(priceStr, '14px');
       
-      // ราคาชิดขวา
       ctx.textAlign = 'right';
       ctx.fillText(priceStr, W - pad, y);
       
-      // ชื่อสินค้าชิดซ้าย (และตัดคำอัตโนมัติหากชื่อยาวไป)
       ctx.textAlign = 'left';
       ctx.fillText(fit(item.name, '14px', usableW - priceW - ROWGAP), pad, y);
       y += lineH;
@@ -1187,7 +1182,6 @@ async function saveQR() {
     ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
     y += lineH;
 
-    // สรุปยอดรวมท้ายตาราง
     const total = rows.reduce((s, r) => s + r.price, 0);
     ctx.font = 'bold 15px ' + FONT;
     ctx.fillStyle = '#1a2744';
@@ -1198,14 +1192,13 @@ async function saveQR() {
     y += 14;
   }
 
-  // ฟุตเตอร์กำกับท้ายภาพลายน้ำสากล
   y += 20;
   ctx.fillStyle = '#cbd5e1';
   ctx.font = '11px ' + FONT;
   ctx.textAlign = 'center';
   ctx.fillText('PromptPay · Bank of Thailand Standard', W / 2, y);
 
-  // ---- นำส่งไฟล์รูปภาพออกไปยังอุปกรณ์ของผู้ใช้ ----
+  // ---- Save & Share ----
   const fileName = 'promptpay-qr.png';
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
   if (!blob) {
@@ -1220,7 +1213,6 @@ async function saveQR() {
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // หากแอปทำงานบน iOS/Android ล่าสุด จะเรียกหน้าแชร์ระบบ (Share Sheet) ส่งเข้าอัลบั้ม/ไลน์ได้ทันที
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'QR พร้อมเพย์' });
@@ -1243,7 +1235,6 @@ async function saveQR() {
     return;
   }
 
-  // แผนสำรองสำหรับ iOS รุ่นเก่า: เปิดรูปแท็บใหม่เพื่อให้ผู้ใช้กดค้างเซฟลงเครื่องได้โดยตรง
   window.open(url, '_blank');
   showToast('กดค้างที่รูปเพื่อบันทึกลงอัลบั้ม', '#1a2744');
   setTimeout(() => URL.revokeObjectURL(url), 60000);
