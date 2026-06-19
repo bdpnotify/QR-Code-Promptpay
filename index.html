@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR พร้อมเพย์</title>
 
-<!-- PWA -->
 <link rel="manifest" href="/QR-Code-Promptpay/manifest.json">
 <meta name="theme-color" content="#1a2744">
 <meta name="mobile-web-app-capable" content="yes">
@@ -541,7 +540,6 @@
 <div class="card">
   <div class="header">
     <div class="logo-wrap">
-      <!-- PromptPay-style icon -->
       <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="48" height="48" rx="10" fill="#1a3a8f"/>
         <path d="M10 18h4v12h-4zM17 12h4v18h-4zM24 15h4v15h-4zM31 18h4v12h-4z" fill="#f59e0b"/>
@@ -555,7 +553,6 @@
   </div>
 
   <div class="body">
-    <!-- Account + Name + Save as one group -->
     <div class="field">
       <label for="accountInput">เบอร์มือถือ / เลขบัตรประชาชน</label>
       <div class="input-wrap">
@@ -570,7 +567,6 @@
       <div class="err-msg" id="accountErr">รูปแบบไม่ถูกต้อง กรุณาตรวจสอบ</div>
     </div>
 
-    <!-- Name + Save row -->
     <div class="field">
       <label for="nameInput">ชื่อผู้รับเงิน <span style="font-weight:400;color:var(--mid);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -590,13 +586,11 @@
       <div class="hint" style="margin-top:6px">กรอกแล้วกด "บันทึก" เพื่อเก็บไว้ใช้ครั้งหน้า</div>
     </div>
 
-    <!-- Saved contacts -->
     <div id="contactsSection" style="margin-bottom:20px;display:none">
       <div class="contacts-label">รายชื่อที่บันทึกไว้</div>
       <div class="contacts-bar" id="contactsBar"></div>
     </div>
 
-    <!-- Amount field -->
     <div class="field" id="amountField">
       <label for="amountInput">จำนวนเงิน</label>
       <div class="amount-row">
@@ -608,7 +602,6 @@
       <div class="hint">ไม่ระบุจำนวนเงิน = ให้ผู้จ่ายกรอกเอง</div>
     </div>
 
-    <!-- Quick amounts -->
     <div id="quickSection">
       <div class="quick-label">จำนวนที่ใช้บ่อย</div>
       <div class="quick-btns">
@@ -621,13 +614,11 @@
       </div>
     </div>
 
-    <!-- Items toggle -->
     <label class="items-toggle" id="itemsToggle" onclick="toggleItems()">
       <div class="toggle-track"></div>
       <span class="toggle-label">เพิ่มรายการสินค้า <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--mid)">(ไม่บังคับ)</span></span>
     </label>
 
-    <!-- Items section -->
     <div class="items-section" id="itemsSection">
       <div class="item-row" style="margin-bottom:4px">
         <span style="font-size:12px;font-weight:600;color:var(--mid);letter-spacing:0.04em">รายการ</span>
@@ -645,7 +636,6 @@
       </div>
     </div>
 
-    <!-- Generate button -->
     <button class="gen-btn" onclick="generate()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -655,7 +645,6 @@
       สร้าง QR Code
     </button>
 
-    <!-- Result -->
     <div id="result">
       <div class="divider"></div>
       <div class="result-header">สแกนเพื่อชำระเงิน</div>
@@ -1067,6 +1056,9 @@ async function saveQR() {
     );
   } catch (e) {}
   await document.fonts.ready;
+  
+  // เพิ่ม delay ตรงนี้เพื่อแก้ปัญหา iOS โหลดฟอนต์ไม่ทันตอนวาด canvas
+  await new Promise(resolve => setTimeout(resolve, 200));
 
   // ---- gather content ----
   const name = document.getElementById('nameInput').value.trim();
