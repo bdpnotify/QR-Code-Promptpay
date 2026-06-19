@@ -1,4 +1,4 @@
-const CACHE = 'promptpay-v20';
+const CACHE = 'promptpay-v21';
 const BASE  = '/QR-Code-Promptpay';
 const ASSETS = [
   BASE + '/',

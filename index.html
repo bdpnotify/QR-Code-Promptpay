@@ -1046,9 +1046,16 @@ async function saveQR() {
   const qrCanvas = document.querySelector('#qrcode canvas');
   if (!qrCanvas) return;
 
-  // ถอด system-ui ออกเพื่อหนีบั๊กตัวอักษรซ้อนทับของ iOS Safari
-  // ใช้ฟอนต์มาตรฐานแทน ซึ่งบน iOS จะแสดงผลได้สวยงามและช่องไฟปกติ 100%
-  const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+  // ใช้ Sarabun (เว็บฟอนต์ที่โหลดในหน้าอยู่แล้ว) เพื่อความคมชัดและช่องไฟไทยที่ถูกต้อง
+  // ต้องรอให้ฟอนต์โหลดเสร็จก่อนวาด canvas มิฉะนั้นการวัดความกว้าง (measureText) จะเพี้ยน
+  const FONT = "'Sarabun', 'Helvetica Neue', Arial, sans-serif";
+  try {
+    await Promise.all([
+      document.fonts.load("700 26px Sarabun"),
+      document.fonts.load("400 14px Sarabun"),
+    ]);
+    await document.fonts.ready;
+  } catch (e) { /* มีฟอนต์สำรองรองรับอยู่แล้ว */ }
 
   // ---- ดึงข้อมูลจากหน้าแอป ----
   const name = document.getElementById('nameInput').value.trim();
@@ -1198,46 +1205,78 @@ async function saveQR() {
   ctx.textAlign = 'center';
   ctx.fillText('PromptPay · Bank of Thailand Standard', W / 2, y);
 
-  // ---- Save & Share ----
+  // ---- แสดงผลในโมดอลภายในแอป (ป้องกันภาพตกขอบบน iOS แบบ 100%) ----
   const fileName = 'promptpay-qr.png';
+  const dataUrl = out.toDataURL('image/png');
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
-  if (!blob) {
-    const a = document.createElement('a');
-    a.download = fileName;
-    a.href = out.toDataURL('image/png');
-    a.click();
-    return;
-  }
+  showImageModal(dataUrl, blob, fileName);
+}
 
-  const file = new File([blob], fileName, { type: 'image/png' });
+// แสดงรูปที่สร้างเสร็จในโมดอลเต็มจอ — รูปถูกบีบด้วย max-width:100% จึงไม่มีทางตกขอบ
+// iOS: กดค้างที่รูปเพื่อ "บันทึกภาพ" ลงอัลบั้ม หรือกดปุ่มแชร์ (เซฟลง Photos ได้ทั้งคู่)
+function showImageModal(dataUrl, blob, fileName) {
+  const old = document.getElementById('imgModal');
+  if (old) old.remove();
+
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: 'QR พร้อมเพย์' });
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return; 
-    }
+  const modal = document.createElement('div');
+  modal.id = 'imgModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,0.88);' +
+    'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;' +
+    'padding:24px 20px;font-family:Sarabun,Tahoma,sans-serif';
+
+  const hint = document.createElement('div');
+  hint.style.cssText = 'color:#fff;font-size:14px;line-height:1.55;text-align:center;opacity:0.92;max-width:340px';
+  hint.innerHTML = isIOS
+    ? 'กดค้างที่รูป แล้วเลือก “บันทึกภาพ”<br>หรือกดปุ่มแชร์ด้านล่าง'
+    : 'กดปุ่มดาวน์โหลดด้านล่างเพื่อบันทึกรูป';
+
+  const img = document.createElement('img');
+  img.src = dataUrl;                       // data URL → กดค้างบันทึกได้เต็มความละเอียดบน iOS
+  img.alt = 'QR พร้อมเพย์';
+  img.style.cssText = 'max-width:100%;max-height:62vh;width:auto;height:auto;border-radius:14px;' +
+    'box-shadow:0 14px 44px rgba(0,0,0,0.45);background:#fff';
+
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:12px;width:100%;max-width:340px';
+
+  const file = blob ? new File([blob], fileName, { type: 'image/png' }) : null;
+  const canShareFile = file && navigator.canShare && navigator.canShare({ files: [file] });
+
+  const primary = document.createElement('button');
+  primary.style.cssText = 'flex:2;height:50px;border:none;border-radius:12px;background:#fff;color:#1a2744;' +
+    'font-family:Sarabun,Tahoma,sans-serif;font-size:15px;font-weight:700;cursor:pointer';
+  if (canShareFile) {
+    primary.textContent = '↗  แชร์ / บันทึก';
+    primary.onclick = async () => {
+      try { await navigator.share({ files: [file], title: 'QR พร้อมเพย์' }); }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    };
+  } else {
+    primary.textContent = '⬇  ดาวน์โหลด';
+    primary.onclick = () => {
+      const a = document.createElement('a');
+      a.href = dataUrl; a.download = fileName;
+      document.body.appendChild(a); a.click(); a.remove();
+      showToast('✓ บันทึกรูป QR แล้ว');
+    };
   }
 
-  const url = URL.createObjectURL(blob);
-  if (!isIOS) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-    showToast('✓ บันทึกรูป QR แล้ว');
-    return;
-  }
+  const close = document.createElement('button');
+  close.textContent = 'ปิด';
+  close.style.cssText = 'flex:1;height:50px;border:2px solid rgba(255,255,255,0.35);border-radius:12px;' +
+    'background:transparent;color:#fff;font-family:Sarabun,Tahoma,sans-serif;font-size:15px;font-weight:600;cursor:pointer';
+  close.onclick = () => modal.remove();
 
-  window.open(url, '_blank');
-  showToast('กดค้างที่รูปเพื่อบันทึกลงอัลบั้ม', '#1a2744');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  row.appendChild(primary);
+  row.appendChild(close);
+  modal.appendChild(hint);
+  modal.appendChild(img);
+  modal.appendChild(row);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
 
 // enter to generate — only when typing in the account or amount field
