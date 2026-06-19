@@ -1048,7 +1048,7 @@ async function saveQR() {
 
   const FONT = "'Sarabun', 'Noto Sans Thai', Tahoma, sans-serif";
 
-  // Force the real font into the canvas (DOM-ready != canvas-ready, esp. on iOS).
+  // 1. รอโหลดฟอนต์ตามมาตรฐาน
   try {
     await Promise.all(
       ['700 26px','700 18px','700 16px','700 15px','400 14px','400 13px','400 11px']
@@ -1057,8 +1057,16 @@ async function saveQR() {
   } catch (e) {}
   await document.fonts.ready;
   
-  // เพิ่ม delay ตรงนี้เพื่อแก้ปัญหา iOS โหลดฟอนต์ไม่ทันตอนวาด canvas
-  await new Promise(resolve => setTimeout(resolve, 200));
+  // 2. [ไม้ตายแก้บั๊ก iOS] บังคับปลุกฟอนต์ใน Canvas
+  // สร้าง Canvas ล่องหนขึ้นมาวาดตัวอักษรทิ้งไว้ เพื่อบังคับให้ Safari ดึงฟอนต์เข้า Graphic Core ก่อนคำนวณตำแหน่ง
+  const dummyCtx = document.createElement('canvas').getContext('2d');
+  ['700 26px','700 18px','700 16px','700 15px','400 14px','400 13px','400 11px'].forEach(f => {
+    dummyCtx.font = f + " 'Sarabun'";
+    dummyCtx.fillText('ก', 0, 0); 
+  });
+
+  // หน่วงเวลาอีกนิดให้แน่ใจว่าประมวลผลทัน
+  await new Promise(resolve => setTimeout(resolve, 300));
 
   // ---- gather content ----
   const name = document.getElementById('nameInput').value.trim();
@@ -1088,12 +1096,11 @@ async function saveQR() {
   const pad   = 28;
   const QRW   = qrCanvas.width;
   const lineH = 26, hdrH = 50, qrPad = 14;
-  const ROWGAP = 28;          // min space between an item name and its price
-  const MAXW  = 600;          // safety cap so a very long name can't blow up the image
+  const ROWGAP = 28;          
+  const MAXW  = 600;          
 
   const mctx = document.createElement('canvas').getContext('2d');
   const mw = (text, font) => { mctx.font = font + ' ' + FONT; return mctx.measureText(text).width; };
-  // truncate with … so a string fits maxPx in the given font
   const fit = (text, font, maxPx) => {
     if (mw(text, font) <= maxPx) return text;
     let s = text;
@@ -1101,7 +1108,7 @@ async function saveQR() {
     return s + '…';
   };
 
-  let contentW = QRW;         // QR anchors the minimum width
+  let contentW = QRW;         
   if (name)       contentW = Math.max(contentW, mw(name, 'bold 18px'));
   contentW = Math.max(contentW, mw(dispAcct, '13px'));
   if (amountText) contentW = Math.max(contentW, mw(amountText + ' บาท', 'bold 26px'));
@@ -1222,15 +1229,10 @@ async function saveQR() {
   ctx.fillText('PromptPay · Bank of Thailand Standard', W / 2, y);
 
   // ---- Cross-platform save ----
-  // Strategy: Blob (reliable, no data-URL size limit)
-  //   1) Web Share API w/ file  → native "Save to Photos / Files / LINE" (iOS 15+ & Android) — consistent
-  //   2) <a download> via blob  → desktop & Android without share
-  //   3) open blob in new tab   → old iOS Safari where download is ignored (long-press to save)
   const fileName = 'promptpay-qr.png';
 
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
   if (!blob) {
-    // last-resort fallback for very old engines
     const a = document.createElement('a');
     a.download = fileName;
     a.href = out.toDataURL('image/png');
@@ -1242,20 +1244,17 @@ async function saveQR() {
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // 1) Native share sheet
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'QR พร้อมเพย์' });
       return;
     } catch (err) {
-      if (err && err.name === 'AbortError') return; // user closed the sheet — done
-      // otherwise fall through to download
+      if (err && err.name === 'AbortError') return; 
     }
   }
 
   const url = URL.createObjectURL(blob);
 
-  // 2) Direct download (desktop / Android)
   if (!isIOS) {
     const a = document.createElement('a');
     a.href = url;
@@ -1268,7 +1267,6 @@ async function saveQR() {
     return;
   }
 
-  // 3) iOS without share support — open the image so the user can long-press → Save Image
   window.open(url, '_blank');
   showToast('กดค้างที่รูปเพื่อบันทึกลงอัลบั้ม', '#1a2744');
   setTimeout(() => URL.revokeObjectURL(url), 60000);
