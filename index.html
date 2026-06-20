@@ -48,8 +48,35 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px 16px;
+    padding: 24px 16px calc(90px + env(safe-area-inset-bottom));
   }
+
+  /* แถบแท็บล่างจอ */
+  #tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+    display: flex; justify-content: center;
+    background: rgba(20, 30, 54, 0.97);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  }
+  #tabbar .inner { display: flex; gap: 8px; width: 100%; max-width: 460px; }
+  .tabbtn {
+    flex: 1; height: 54px; border: none; border-radius: 14px; cursor: pointer;
+    background: transparent; color: rgba(255,255,255,0.55);
+    font-family: 'Sarabun', sans-serif; font-size: 12px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    transition: all .15s;
+  }
+  .tabbtn.active { background: rgba(255,255,255,0.13); color: #fff; }
+  .tabbtn .ic { font-size: 19px; line-height: 1; }
+  .tcount {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 17px; height: 17px; padding: 0 5px; margin-left: 2px;
+    background: var(--gold); color: #1a2744; border-radius: 9px;
+    font-size: 11px; font-weight: 700; vertical-align: middle;
+  }
+  .tcount:empty { display: none; }
 
   .card {
     background: var(--white);
@@ -564,6 +591,7 @@
   </div>
 
   <div class="body">
+    <div id="tabQR">
     <div class="field">
       <label for="accountInput">เบอร์มือถือ / เลขบัตรประชาชน</label>
       <div class="input-wrap">
@@ -673,8 +701,73 @@
       </button>
       <div class="pp-badge">PromptPay · Bank of Thailand Standard</div>
     </div>
+    </div><!-- /tabQR -->
+
+    <div id="tabDebt" style="display:none">
+      <div id="debtListView">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px">
+          <div style="font-size:18px;font-weight:700;color:var(--navy)">📒 สมุดหนี้</div>
+          <div style="display:flex;gap:6px">
+            <button type="button" onclick="document.getElementById('debtorImport').click()" title="กู้คืนจากไฟล์สำรอง" style="height:32px;padding:0 12px;border:1.5px solid #e2e8f0;background:#fff;border-radius:9px;font-family:Sarabun,Tahoma,sans-serif;font-size:12px;font-weight:600;color:#64748b;cursor:pointer">กู้คืน</button>
+            <button type="button" onclick="exportDebtors()" title="สำรองข้อมูลเป็นไฟล์" style="height:32px;padding:0 12px;border:1.5px solid #e2e8f0;background:#fff;border-radius:9px;font-family:Sarabun,Tahoma,sans-serif;font-size:12px;font-weight:600;color:#64748b;cursor:pointer">⤓ สำรอง</button>
+          </div>
+        </div>
+        <button type="button" onclick="addDebtor()" style="width:100%;height:48px;border:none;background:var(--navy);border-radius:12px;font-family:Sarabun,Tahoma,sans-serif;font-size:15px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          เพิ่มลูกหนี้
+        </button>
+        <div id="debtorList" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="debtorEmpty" class="hint" style="margin-top:8px;text-align:center;padding:24px 8px;line-height:1.7">ยังไม่มีลูกหนี้<br>กด “เพิ่มลูกหนี้” เพื่อเริ่ม แล้วบันทึกรายการที่ติดไว้<br>กดเลือกคนไหนก็เปิดหน้าของเขา สร้าง QR ยอดรวมให้สแกนจ่ายได้ทันที</div>
+      </div>
+
+      <div id="debtDetail" style="display:none">
+        <button type="button" onclick="backToDebtList()" style="display:inline-flex;align-items:center;gap:4px;height:36px;border:none;background:transparent;color:var(--navy);font-family:Sarabun,Tahoma,sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;padding:0">‹ สมุดหนี้</button>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <div id="debtorName" style="font-size:22px;font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+          <button type="button" onclick="renameDebtor()" aria-label="แก้ชื่อ" style="flex-shrink:0;width:30px;height:30px;border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+          </button>
+        </div>
+        <div style="font-size:13px;color:var(--mid);margin-bottom:16px">รายการที่ติด<span id="debtorSaved" style="opacity:0;transition:opacity .3s;color:#16a34a;margin-left:6px">✓ บันทึกแล้ว</span></div>
+
+        <div class="item-row" style="margin-bottom:4px">
+          <span style="font-size:12px;font-weight:600;color:var(--mid);letter-spacing:0.04em">รายการ</span>
+          <span style="font-size:12px;font-weight:600;color:var(--mid);letter-spacing:0.04em">ราคา (฿)</span>
+          <span></span>
+        </div>
+        <div id="dItemsList"></div>
+        <button class="add-item-btn" onclick="dAddItem(true)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          เพิ่มรายการ
+        </button>
+        <div class="items-total">
+          <span>รวมที่ต้องเก็บ</span>
+          <span class="total-amt" id="dItemsTotal">฿0.00</span>
+        </div>
+
+        <button class="gen-btn" onclick="generateForDebtor()" style="margin-top:18px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h.01M17 14h.01M17 17h3"/>
+          </svg>
+          สร้าง QR เก็บเงิน
+        </button>
+      </div>
+
+      <input type="file" id="debtorImport" accept="application/json,.json" style="display:none" onchange="importDebtors(event)">
+    </div>
   </div>
 </div>
+
+<nav id="tabbar">
+  <div class="inner">
+    <button id="tabBtnQR" class="tabbtn active" type="button" onclick="switchTab('qr')">
+      <span class="ic">▣</span>QR
+    </button>
+    <button id="tabBtnDebt" class="tabbtn" type="button" onclick="switchTab('debt')">
+      <span class="ic">📒</span><span>สมุดหนี้ <span id="tabDebtCount" class="tcount"></span></span>
+    </button>
+  </div>
+</nav>
 
 <script>
 // ---------- Escape HTML (prevent XSS from user-entered names) ----------
@@ -857,6 +950,301 @@ function deleteContact(e, i) {
 // init — fire on both events for reliability
 document.addEventListener('DOMContentLoaded', renderContacts);
 window.addEventListener('load', renderContacts);
+
+// ---------- สมุดหนี้ (Debt book) ----------
+let activeDebtorId = null;
+let _persistTimer = null;
+
+function loadDebtors() {
+  try { return JSON.parse(localStorage.getItem('pp_debtors') || '[]'); }
+  catch { return []; }
+}
+function saveDebtors(list) {
+  try { localStorage.setItem('pp_debtors', JSON.stringify(list)); } catch(e) {}
+}
+function debtorTotal(d) {
+  return (d.items || []).reduce((s, it) => s + (parseFloat(it.price) || 0), 0);
+}
+function fmtBaht(n) {
+  return '฿' + n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function renderDebtors() {
+  const wrap  = document.getElementById('debtorList');
+  const empty = document.getElementById('debtorEmpty');
+  if (!wrap) return;
+  const list = loadDebtors();
+  wrap.innerHTML = '';
+  empty.style.display = list.length ? 'none' : 'block';
+  list.forEach(d => {
+    const total = debtorTotal(d);
+    const cnt = (d.items || []).filter(it => it.name || it.price).length;
+    const active = d.id === activeDebtorId;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1.5px solid ' +
+      (active ? '#6366f1' : '#e2e8f0') + ';background:' + (active ? '#eef2ff' : '#fff') + ';cursor:pointer;transition:all .15s';
+    row.innerHTML =
+      '<div style="flex:1;min-width:0" onclick="openDebtor(\'' + d.id + '\')">' +
+        '<div style="font-weight:700;color:#1e293b;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(d.name) + '</div>' +
+        '<div style="font-size:12px;color:#64748b;margin-top:2px">' + cnt + ' รายการ</div>' +
+      '</div>' +
+      '<div style="font-weight:700;color:#1a2744;font-size:15px;white-space:nowrap" onclick="openDebtor(\'' + d.id + '\')">' + fmtBaht(total) + '</div>' +
+      '<button onclick="deleteDebtor(event,\'' + d.id + '\')" aria-label="ลบ" style="width:28px;height:28px;border:none;background:#fee2e2;color:#ef4444;border-radius:8px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1">×</button>';
+    wrap.appendChild(row);
+  });
+  const cntEl = document.getElementById('tabDebtCount');
+  if (cntEl) cntEl.textContent = list.length ? String(list.length) : '';
+}
+
+function addDebtor() {
+  promptInput('ชื่อลูกหนี้', '', (name) => {
+    name = (name || '').trim();
+    if (!name) return;
+    const list = loadDebtors();
+    const id = 'd' + Date.now();
+    list.push({ id, name, items: [], updatedAt: Date.now() });
+    saveDebtors(list);
+    renderDebtors();
+    openDebtor(id);
+  });
+}
+
+function addItemWith(name, price) {
+  addItem();
+  const rows = document.querySelectorAll('#itemsList .item-row');
+  const inputs = rows[rows.length - 1].querySelectorAll('input');
+  inputs[0].value = name || '';
+  inputs[1].value = (price === undefined || price === null || price === 0) ? '' : price;
+}
+
+// ----- ตัวแก้รายการของหน้าลูกหนี้ (แยกจากแท็บ QR ไม่ปนกัน) -----
+let dItemCount = 0;
+
+function dAddItem(focusIt) {
+  const list = document.getElementById('dItemsList');
+  const id = ++dItemCount;
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.id = 'ditem-' + id;
+  row.innerHTML =
+    '<input type="text" placeholder="ชื่อรายการ" oninput="dCalcTotal()">' +
+    '<input type="number" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="dCalcTotal()">' +
+    '<button class="del-btn" onclick="dRemoveItem(' + id + ')" aria-label="ลบรายการ">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button>';
+  list.appendChild(row);
+  if (focusIt) row.querySelector('input').focus();
+}
+
+function dAddItemWith(name, price) {
+  dAddItem(false);
+  const rows = document.querySelectorAll('#dItemsList .item-row');
+  const inputs = rows[rows.length - 1].querySelectorAll('input');
+  inputs[0].value = name || '';
+  inputs[1].value = (price === undefined || price === null || price === 0) ? '' : price;
+}
+
+function dRemoveItem(id) {
+  const el = document.getElementById('ditem-' + id);
+  if (el) el.remove();
+  if (document.getElementById('dItemsList').children.length === 0) dAddItem(true);
+  dCalcTotal();
+}
+
+function dGetItems() {
+  const items = [];
+  document.querySelectorAll('#dItemsList .item-row').forEach(row => {
+    const inp = row.querySelectorAll('input');
+    const name = inp[0].value.trim();
+    const price = parseFloat(inp[1].value);
+    if (name || (!isNaN(price) && price > 0)) {
+      items.push({ name: name, price: isNaN(price) ? 0 : price });
+    }
+  });
+  return items;
+}
+
+function dCalcTotal() {
+  let total = 0;
+  document.querySelectorAll('#dItemsList .item-row input[type="number"]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v) && v > 0) total += v;
+  });
+  document.getElementById('dItemsTotal').textContent =
+    '฿' + total.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+  persistActiveDebtor();
+  return total;
+}
+
+// ----- เปิดหน้าของลูกหนี้คนหนึ่ง (จบในหน้าเดียว ไม่วาร์ปข้ามแท็บ) -----
+function openDebtor(id) {
+  const d = loadDebtors().find(x => x.id === id);
+  if (!d) return;
+  activeDebtorId = id;
+  document.getElementById('debtorName').textContent = d.name;
+  document.getElementById('dItemsList').innerHTML = '';
+  dItemCount = 0;
+  const wasEmpty = !(d.items && d.items.length);
+  (wasEmpty ? [{ name:'', price:'' }] : d.items).forEach(it => dAddItemWith(it.name, it.price));
+  dCalcTotal();
+  if (!wasEmpty) { const ae = document.activeElement; if (ae && ae.blur) ae.blur(); }
+  document.getElementById('debtListView').style.display = 'none';
+  document.getElementById('debtDetail').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function backToDebtList() {
+  activeDebtorId = null;
+  document.getElementById('debtDetail').style.display = 'none';
+  document.getElementById('debtListView').style.display = '';
+  renderDebtors();
+}
+
+function renameDebtor() {
+  if (!activeDebtorId) return;
+  const list = loadDebtors();
+  const d = list.find(x => x.id === activeDebtorId);
+  if (!d) return;
+  promptInput('แก้ชื่อลูกหนี้', d.name, (name) => {
+    name = (name || '').trim();
+    if (!name) return;
+    d.name = name; d.updatedAt = Date.now();
+    saveDebtors(list);
+    document.getElementById('debtorName').textContent = name;
+  });
+}
+
+function persistActiveDebtor() {
+  if (!activeDebtorId) return;
+  const list = loadDebtors();
+  const d = list.find(x => x.id === activeDebtorId);
+  if (!d) return;
+  d.items = dGetItems();
+  d.updatedAt = Date.now();
+  saveDebtors(list);
+  const ind = document.getElementById('debtorSaved');
+  if (ind) { ind.style.opacity = '1'; clearTimeout(ind._t); ind._t = setTimeout(() => ind.style.opacity = '0', 1200); }
+}
+
+// ----- สร้าง QR เก็บเงินจากหน้าลูกหนี้ : ใช้เครื่องสร้าง QR/สลิปตัวเดิม แล้วเด้งสลิปทับหน้านี้ -----
+async function generateForDebtor() {
+  const account = (document.getElementById('accountInput').value || '').replace(/[-\s]/g, '');
+  const validAcct = (account.length === 10 && /^0[6-9]\d{8}$/.test(account)) ||
+                    (account.length === 13 && /^\d{13}$/.test(account));
+  if (!validAcct) {
+    showToast('ตั้งค่าเบอร์พร้อมเพย์ในแท็บ QR ก่อน', '#ef4444');
+    switchTab('qr');
+    setTimeout(() => document.getElementById('accountInput').focus(), 400);
+    return;
+  }
+  const items = dGetItems();
+  if (!items.length) { showToast('ยังไม่มีรายการให้เก็บเงิน', '#ef4444'); return; }
+
+  // ป้อนรายการลูกหนี้เข้าเครื่องของแท็บ QR (เบื้องหลัง) แล้วใช้ generate()+saveQR() เดิม
+  if (!itemsOpen) toggleItems();
+  const qrList = document.getElementById('itemsList');
+  qrList.innerHTML = '';
+  itemCount = 0;
+  items.forEach(it => addItemWith(it.name, it.price));
+  calcTotal();
+  generate();
+  await saveQR();                       // ประกอบสลิป + เด้งหน้าต่างบันทึก/แชร์ทับหน้าลูกหนี้
+
+  // คืนแท็บ QR ให้สะอาด ไม่ให้รายการลูกหนี้ค้างอยู่
+  qrList.innerHTML = '';
+  itemCount = 0;
+  if (itemsOpen) toggleItems();
+  document.getElementById('result').classList.remove('show');
+}
+
+function deleteDebtor(e, id) {
+  e.stopPropagation();
+  const d = loadDebtors().find(x => x.id === id);
+  if (!d) return;
+  showConfirm('ลบลูกหนี้ "' + d.name + '" และรายการทั้งหมด?', () => {
+    saveDebtors(loadDebtors().filter(x => x.id !== id));
+    if (activeDebtorId === id) backToDebtList();
+    renderDebtors();
+    showToast('ลบแล้ว', '#ef4444');
+  });
+}
+
+function exportDebtors() {
+  const data = loadDebtors();
+  if (!data.length) { showToast('ยังไม่มีข้อมูลให้สำรอง', '#ef4444'); return; }
+  const payload = { type:'promptpay-debtors', version:1, exportedAt:new Date().toISOString(), debtors:data };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'สมุดหนี้-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  showToast('✓ สำรองข้อมูลแล้ว');
+}
+
+function importDebtors(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : parsed.debtors;
+      if (!Array.isArray(incoming)) throw 0;
+      const map = {};
+      loadDebtors().concat(incoming).forEach(d => { if (d && d.id && d.name) map[d.id] = d; });
+      saveDebtors(Object.values(map));
+      renderDebtors();
+      showToast('✓ กู้คืนข้อมูลแล้ว (' + incoming.length + ' คน)');
+    } catch { showToast('ไฟล์สำรองไม่ถูกต้อง', '#ef4444'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// กล่องกรอกชื่อ (แทน prompt() ที่หน้าตาไม่สวยบนมือถือ)
+function promptInput(title, defVal, onOk) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(15,23,42,0.6);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Sarabun,Tahoma,sans-serif';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:22px;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.25)">' +
+      '<div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:12px">' + esc(title) + '</div>' +
+      '<input id="promptField" type="text" value="' + esc(defVal || '') + '" placeholder="เช่น สมชาย ใจดี" style="width:100%;height:48px;border:2px solid #e2e8f0;border-radius:12px;padding:0 14px;font-size:16px;font-family:Sarabun,Tahoma,sans-serif;outline:none">' +
+      '<div style="display:flex;gap:10px;margin-top:16px">' +
+        '<button id="promptCancel" style="flex:1;height:46px;border:2px solid #e2e8f0;background:#fff;border-radius:10px;font-family:inherit;font-size:15px;color:#64748b;cursor:pointer">ยกเลิก</button>' +
+        '<button id="promptOk" style="flex:1;height:46px;border:none;background:#1a2744;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;color:#fff;cursor:pointer">ตกลง</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  const field = ov.querySelector('#promptField');
+  setTimeout(() => field.focus(), 50);
+  const close = () => ov.remove();
+  const ok = () => { const v = field.value; close(); onOk(v); };
+  ov.querySelector('#promptCancel').onclick = close;
+  ov.querySelector('#promptOk').onclick = ok;
+  field.addEventListener('keydown', ev => { if (ev.key === 'Enter') ok(); });
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+}
+
+// สลับแท็บ QR / สมุดหนี้
+function switchTab(name, scrollTop) {
+  const isQR = name === 'qr';
+  document.getElementById('tabQR').style.display   = isQR ? '' : 'none';
+  document.getElementById('tabDebt').style.display = isQR ? 'none' : '';
+  document.getElementById('tabBtnQR').classList.toggle('active', isQR);
+  document.getElementById('tabBtnDebt').classList.toggle('active', !isQR);
+  if (!isQR) {                            // เข้าแท็บสมุดหนี้ = กลับมาหน้ารายชื่อเสมอ
+    activeDebtorId = null;
+    document.getElementById('debtDetail').style.display = 'none';
+    document.getElementById('debtListView').style.display = '';
+    renderDebtors();
+  }
+  if (scrollTop !== false) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', renderDebtors);
+window.addEventListener('load', renderDebtors);
 
 // ---------- UI logic ----------
 let qrInstance = null;
