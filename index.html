@@ -1098,6 +1098,11 @@ async function saveQR() {
     while (s.length > 1 && mw(s + '…', font) > maxPx) s = s.slice(0, -1);
     return s + '…';
   };
+  // วาดข้อความกึ่งกลางโดยคำนวณ x เอง — ไม่พึ่ง ctx.textAlign ซึ่งใช้ไม่ได้บน iOS Safari บางเครื่อง
+  const drawCenter = (text, fontShort, cx, yy) => {
+    ctx.font = fontShort + ' ' + FONT;
+    ctx.fillText(text, cx - mw(text, fontShort) / 2, yy);
+  };
 
   let H = hdrH + qrPad;
   if (name) H += 32;
@@ -1116,30 +1121,27 @@ async function saveQR() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
+  // ใช้ left/start เป็นค่าเดียวตลอด (textAlign อื่นบั๊กบน iOS) แล้วจัดตำแหน่งเอง
+  ctx.textAlign = 'left';
+
   // วาดแบนเนอร์
   ctx.fillStyle = '#1a2744';
   ctx.fillRect(0, 0, W, hdrH);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 17px ' + FONT;
-  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('QR พร้อมเพย์', W / 2, hdrH / 2);
+  drawCenter('QR พร้อมเพย์', 'bold 17px', W / 2, hdrH / 2);
 
   let y = hdrH + qrPad;
   ctx.textBaseline = 'alphabetic';
 
   if (name) {
     ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 18px ' + FONT;
-    ctx.textAlign = 'center';
-    ctx.fillText(fit(name, 'bold 18px', W - (pad * 2)), W / 2, y + 20);
+    drawCenter(fit(name, 'bold 18px', W - (pad * 2)), 'bold 18px', W / 2, y + 20);
     y += 32;
   }
 
   ctx.fillStyle = '#64748b';
-  ctx.font = '14px ' + FONT;
-  ctx.textAlign = 'center';
-  ctx.fillText(dispAcct, W / 2, y + 14);
+  drawCenter(dispAcct, '14px', W / 2, y + 14);
   y += 22;
 
   // วาด QR
@@ -1153,9 +1155,7 @@ async function saveQR() {
   // วาดจำนวนเงิน
   if (amountText) {
     ctx.fillStyle = '#1a2744';
-    ctx.font = 'bold 26px ' + FONT;
-    ctx.textAlign = 'center';
-    ctx.fillText(amountText + ' บาท', W / 2, y + 28);
+    drawCenter(amountText + ' บาท', 'bold 26px', W / 2, y + 28);
     y += 42;
   }
 
@@ -1175,11 +1175,11 @@ async function saveQR() {
       ctx.fillStyle = '#1e293b';
       const priceStr = fmt(item.price);
       const priceW   = mw(priceStr, '14px');
-      
-      ctx.textAlign = 'right';
-      ctx.fillText(priceStr, W - pad, y);
-      
+
+      // ไม่ใช้ textAlign='right' (บั๊ก iOS Safari บางเครื่องไม่ทำงาน → ข้อความล้นขอบ)
+      // คำนวณตำแหน่ง x เองให้ขอบขวาของข้อความอยู่ที่ (W - pad) พอดี แล้ววาดแบบ left
       ctx.textAlign = 'left';
+      ctx.fillText(priceStr, (W - pad) - priceW, y);
       ctx.fillText(fit(item.name, '14px', usableW - priceW - ROWGAP), pad, y);
       y += lineH;
     });
@@ -1190,20 +1190,18 @@ async function saveQR() {
     y += lineH;
 
     const total = rows.reduce((s, r) => s + r.price, 0);
+    const totalStr = fmt(total);
     ctx.font = 'bold 15px ' + FONT;
     ctx.fillStyle = '#1a2744';
     ctx.textAlign = 'left';
     ctx.fillText('รวม', pad, y);
-    ctx.textAlign = 'right';
-    ctx.fillText(fmt(total), W - pad, y);
+    ctx.fillText(totalStr, (W - pad) - mw(totalStr, 'bold 15px'), y);
     y += 14;
   }
 
   y += 20;
   ctx.fillStyle = '#cbd5e1';
-  ctx.font = '11px ' + FONT;
-  ctx.textAlign = 'center';
-  ctx.fillText('PromptPay · Bank of Thailand Standard', W / 2, y);
+  drawCenter('PromptPay · Bank of Thailand Standard', '11px', W / 2, y);
 
   // ---- แสดงผลในโมดอลภายในแอป (ป้องกันภาพตกขอบบน iOS แบบ 100%) ----
   const fileName = 'promptpay-qr.png';
@@ -1212,8 +1210,11 @@ async function saveQR() {
   showImageModal(dataUrl, blob, fileName);
 }
 
-// แสดงรูปที่สร้างเสร็จในโมดอลเต็มจอ — รูปถูกบีบด้วย max-width:100% จึงไม่มีทางตกขอบ
-// iOS: กดค้างที่รูปเพื่อ "บันทึกภาพ" ลงอัลบั้ม หรือกดปุ่มแชร์ (เซฟลง Photos ได้ทั้งคู่)
+// แสดงรูปที่สร้างเสร็จในโมดอลเต็มจอ
+// สำคัญ: บีบรูปด้วย "ความกว้าง" อย่างเดียว (max-width:100% เท่านั้น ห้ามใส่ max-height)
+// เพราะ iOS Safari มีบั๊ก flexbox+img: ถ้าใส่ทั้ง max-width และ max-height พร้อม width:auto
+// มันจะคำนวณความกว้างจาก max-height แล้วไม่ clamp กลับ ทำให้รูปล้นขวาและโดนตัด (ตกขอบ)
+// วิธีนี้ความกว้างรูปจะไม่มีทางเกิน container → ตกขอบไม่ได้ ส่วนรูปสูงก็เลื่อนดูได้
 function showImageModal(dataUrl, blob, fileName) {
   const old = document.getElementById('imgModal');
   if (old) old.remove();
@@ -1223,12 +1224,17 @@ function showImageModal(dataUrl, blob, fileName) {
 
   const modal = document.createElement('div');
   modal.id = 'imgModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,0.88);' +
-    'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;' +
-    'padding:24px 20px;font-family:Sarabun,Tahoma,sans-serif';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,0.9);' +
+    'display:flex;flex-direction:column;font-family:Sarabun,Tahoma,sans-serif';
+
+  // ---- ส่วนเลื่อน (รูป + คำแนะนำ) ----
+  const scroll = document.createElement('div');
+  scroll.style.cssText = 'flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;' +
+    'display:flex;flex-direction:column;align-items:center;gap:16px;' +
+    'padding:calc(20px + env(safe-area-inset-top)) 16px 16px';
 
   const hint = document.createElement('div');
-  hint.style.cssText = 'color:#fff;font-size:14px;line-height:1.55;text-align:center;opacity:0.92;max-width:340px';
+  hint.style.cssText = 'color:#fff;font-size:14px;line-height:1.55;text-align:center;opacity:0.92;max-width:360px;flex-shrink:0';
   hint.innerHTML = isIOS
     ? 'กดค้างที่รูป แล้วเลือก “บันทึกภาพ”<br>หรือกดปุ่มแชร์ด้านล่าง'
     : 'กดปุ่มดาวน์โหลดด้านล่างเพื่อบันทึกรูป';
@@ -1236,11 +1242,17 @@ function showImageModal(dataUrl, blob, fileName) {
   const img = document.createElement('img');
   img.src = dataUrl;                       // data URL → กดค้างบันทึกได้เต็มความละเอียดบน iOS
   img.alt = 'QR พร้อมเพย์';
-  img.style.cssText = 'max-width:100%;max-height:62vh;width:auto;height:auto;border-radius:14px;' +
-    'box-shadow:0 14px 44px rgba(0,0,0,0.45);background:#fff';
+  // width:100% ของกล่อง แต่ไม่เกินขนาดจริง และไม่เกิน 380px เพื่อความสวยงาม — ไม่มี max-height
+  img.style.cssText = 'display:block;width:100%;max-width:380px;height:auto;flex-shrink:0;' +
+    'border-radius:14px;box-shadow:0 14px 44px rgba(0,0,0,0.45);background:#fff';
 
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:12px;width:100%;max-width:340px';
+  scroll.appendChild(hint);
+  scroll.appendChild(img);
+
+  // ---- แถบปุ่มตรึงด้านล่าง (เห็นเสมอ ไม่ต้องเลื่อนหา) ----
+  const bar = document.createElement('div');
+  bar.style.cssText = 'flex-shrink:0;display:flex;gap:12px;background:rgba(15,23,42,0.96);' +
+    'padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,0.1)';
 
   const file = blob ? new File([blob], fileName, { type: 'image/png' }) : null;
   const canShareFile = file && navigator.canShare && navigator.canShare({ files: [file] });
@@ -1270,12 +1282,12 @@ function showImageModal(dataUrl, blob, fileName) {
     'background:transparent;color:#fff;font-family:Sarabun,Tahoma,sans-serif;font-size:15px;font-weight:600;cursor:pointer';
   close.onclick = () => modal.remove();
 
-  row.appendChild(primary);
-  row.appendChild(close);
-  modal.appendChild(hint);
-  modal.appendChild(img);
-  modal.appendChild(row);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  bar.appendChild(primary);
+  bar.appendChild(close);
+  modal.appendChild(scroll);
+  modal.appendChild(bar);
+  // แตะพื้นที่ว่าง (นอกรูป) เพื่อปิด
+  scroll.addEventListener('click', e => { if (e.target === scroll) modal.remove(); });
   document.body.appendChild(modal);
 }
 
