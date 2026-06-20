@@ -2,7 +2,8 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
 <title>QR พร้อมเพย์</title>
 
 <link rel="manifest" href="/QR-Code-Promptpay/manifest.json">
@@ -17,6 +18,16 @@
   @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    touch-action: manipulation;            /* ปิด double-tap zoom */
+    -webkit-text-size-adjust: 100%;        /* กันการปรับขนาดตัวอักษรอัตโนมัติ */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;             /* กัน pull-to-refresh / เด้งขอบ */
+  }
+  /* ปล่อยให้เลือก/คัดลอกได้เฉพาะช่องกรอก ส่วน UI อื่นไม่ให้ลากเลือก (ฟีลแอป) */
+  body { -webkit-user-select: none; user-select: none; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
 
   :root {
     --navy:   #1a2744;
@@ -1297,6 +1308,16 @@ document.addEventListener('keydown', e => {
     generate();
   }
 });
+
+// ---- ปิดการซูม (pinch) บน iOS ให้รู้สึกเหมือนแอป ----
+// iOS Safari เพิกเฉย user-scalable=no จึงต้องดัก gesture เอง
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false })
+);
+// กัน pinch ด้วยนิ้วสองนิ้ว (สำรองสำหรับบางเครื่อง)
+document.addEventListener('touchmove', e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
 
 // register service worker for PWA
 if ('serviceWorker' in navigator) {
